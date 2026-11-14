@@ -1,0 +1,7 @@
+.env
+*.local.md
+secrets/
+local/
+n8n_data/
+materials/video_frames/
+*.log

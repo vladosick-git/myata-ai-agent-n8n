@@ -1,0 +1,510 @@
+{
+  "id": "MyataOtchet00001",
+  "name": "Мята. Отчёт за день",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 20
+            }
+          ]
+        }
+      },
+      "id": "00000000-0000-4000-8000-000000000029",
+      "name": "Каждый день в 20:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "00000000-0000-4000-8000-000000000030",
+      "name": "Команда /otchet",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "ВСТАВЬТЕ_ID_ТАБЛИЦЫ",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Настройки",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "00000000-0000-4000-8000-000000000031",
+      "name": "Настройки",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        200,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ЗАМЕНИТЬ",
+          "name": "Google Таблицы"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "ВСТАВЬТЕ_ID_ТАБЛИЦЫ",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Журнал решений",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "00000000-0000-4000-8000-000000000032",
+      "name": "Журнал решений",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ЗАМЕНИТЬ",
+          "name": "Google Таблицы"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "ВСТАВЬТЕ_ID_ТАБЛИЦЫ",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Заявки",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "00000000-0000-4000-8000-000000000033",
+      "name": "Заявки",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        600,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ЗАМЕНИТЬ",
+          "name": "Google Таблицы"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Считаем цифры за сегодня по журналу решений и листу заявок.\nconst today = DateTime.now().setZone('Europe/Moscow').toFormat('dd.MM.yyyy');\nconst isToday = (r) => String(r['Дата и время'] || '').startsWith(today);\nconst all = $('Журнал решений').all().map((i) => i.json).filter(isToday);\n// Команда /start только открывает диалог, вопросом клиента она не считается.\nconst log = all.filter((r) => String(r['Сообщение клиента'] || '').trim() !== '/start');\nconst leads = $('Заявки').all().map((i) => i.json).filter(isToday);\nlet ownerChat = '';\nfor (const i of $('Настройки').all()) if (i.json['Параметр'] === 'Чат администратора') ownerChat = String(i.json['Значение'] || '').trim();\nconst questions = log.map((r) => '- [' + r['Действие'] + '] тема: ' + (r['Тема'] || 'без темы') + ' | клиент: ' + String(r['Сообщение клиента'] || '').slice(0, 200) + (r['Чего не хватило в базе'] ? ' | не хватило: ' + r['Чего не хватило в базе'] : '')).join('\\n');\nreturn [{ json: {\n  date: today, owner_chat: ownerChat,\n  dialogs: new Set(log.map((r) => String(r['Диалог'] || r['Chat ID']))).size, messages: log.length, leads: leads.length,\n  handoffs: log.filter((r) => r['Действие'] === 'Передача человеку').length,\n  questions: questions, has_data: log.length > 0,\n} }];"
+      },
+      "id": "00000000-0000-4000-8000-000000000034",
+      "name": "Данные за день",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "00000000-0000-4000-8000-000000000035",
+              "leftValue": "={{ $json.has_data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "00000000-0000-4000-8000-000000000036",
+      "name": "Были обращения?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1000,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Ты помогаешь владельцу цветочной студии «Мята». Ниже обращения клиентов за {{ $json.date }} из журнала агента. В каждой строке: действие агента, тема, сообщение клиента и чего не хватило в базе знаний.\n\n{{ $json.questions }}\n\nНапиши две части отчёта простым текстом без разметки, без звёздочек и решёток.\n\nЧастые вопросы\nСгруппируй обращения по смыслу. До 6 групп, от самой частой. Формат строки: «тема — сколько раз». Группы из одного обращения объедини в строку «разное», если их много.\n\nЧто добавить в базу знаний\nДо 4 коротких советов. Опирайся только на то, чего агенту не хватило и что он передал человеку. Если всего хватило, так и напиши одной строкой.\n\nНе придумывай обращений, которых нет в списке. Весь ответ не длиннее 900 знаков."
+      },
+      "id": "00000000-0000-4000-8000-000000000037",
+      "name": "Разбор вопросов",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1220,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-haiku-5-5"
+        },
+        "options": {
+          "maxTokensToSample": 6000,
+          "temperature": 0.2,
+          "thinkingMode": "disabled"
+        }
+      },
+      "id": "00000000-0000-4000-8000-000000000038",
+      "name": "Claude Haiku",
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.6,
+      "position": [
+        1230,
+        120
+      ],
+      "credentials": {
+        "anthropicApi": {
+          "id": "ЗАМЕНИТЬ",
+          "name": "Anthropic"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Собираем итоговый текст отчёта.\nconst d = $('Данные за день').first().json;\nlet analysis = 'Сегодня обращений не было.';\nif (d.has_data) { try { analysis = String($('Разбор вопросов').first().json.text || '').trim(); } catch (e) { analysis = 'Разбор вопросов не получился, цифры выше посчитаны по журналу.'; } }\nconst esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst head = 'Диалогов: ' + d.dialogs + '\\nСообщений: ' + d.messages + '\\nЗаявок: ' + d.leads + '\\nПередано человеку: ' + d.handoffs;\nreturn [{ json: { ...d, report: head + '\\n\\n' + analysis, report_html: '📊 <b>Отчёт за ' + d.date + '</b>\\n' + esc(head) + '\\n\\n' + esc(analysis) } }];"
+      },
+      "id": "00000000-0000-4000-8000-000000000039",
+      "name": "Текст отчёта",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "={{ $json.owner_chat }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.report_html }}"
+            },
+            {
+              "name": "parse_mode",
+              "value": "HTML"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "00000000-0000-4000-8000-000000000040",
+      "name": "Отчёт администратору",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1780,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "ВСТАВЬТЕ_ID_ТАБЛИЦЫ",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Отчёты",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Дата": "={{ $('Текст отчёта').first().json.date }}",
+            "Диалогов": "={{ $('Текст отчёта').first().json.dialogs }}",
+            "Сообщений": "={{ $('Текст отчёта').first().json.messages }}",
+            "Заявок": "={{ $('Текст отчёта').first().json.leads }}",
+            "Передано человеку": "={{ $('Текст отчёта').first().json.handoffs }}",
+            "Отчёт": "={{ $('Текст отчёта').first().json.report }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Дата",
+              "displayName": "Дата",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Диалогов",
+              "displayName": "Диалогов",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Сообщений",
+              "displayName": "Сообщений",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Заявок",
+              "displayName": "Заявок",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Передано человеку",
+              "displayName": "Передано человеку",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Отчёт",
+              "displayName": "Отчёт",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "id": "00000000-0000-4000-8000-000000000041",
+      "name": "Сохранить отчёт",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2000,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "ЗАМЕНИТЬ",
+          "name": "Google Таблицы"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Каждый день в 20:00": {
+      "main": [
+        [
+          {
+            "node": "Настройки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Команда /otchet": {
+      "main": [
+        [
+          {
+            "node": "Настройки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Настройки": {
+      "main": [
+        [
+          {
+            "node": "Журнал решений",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Журнал решений": {
+      "main": [
+        [
+          {
+            "node": "Заявки",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Заявки": {
+      "main": [
+        [
+          {
+            "node": "Данные за день",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Данные за день": {
+      "main": [
+        [
+          {
+            "node": "Были обращения?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Были обращения?": {
+      "main": [
+        [
+          {
+            "node": "Разбор вопросов",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Текст отчёта",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Haiku": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Разбор вопросов",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Разбор вопросов": {
+      "main": [
+        [
+          {
+            "node": "Текст отчёта",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Текст отчёта": {
+      "main": [
+        [
+          {
+            "node": "Отчёт администратору",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Отчёт администратору": {
+      "main": [
+        [
+          {
+            "node": "Сохранить отчёт",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Moscow",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "pinData": {}
+}
